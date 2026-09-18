@@ -210,9 +210,19 @@ function shuffled(arr) {
   return a;
 }
 
+// Перемішує варіанти відповіді всередині одного питання (і перераховує індекс
+// правильної відповіді), щоб правильна відповідь не опинялась завжди на місці "А".
+// Повертає новий об'єкт, не чіпаючи оригінальні дані в questions.js.
+function shuffleQuestionOptions(question) {
+  const order = shuffled(question.options.map((_, i) => i));
+  const options = order.map((i) => question.options[i]);
+  const correct = order.indexOf(question.correct);
+  return { ...question, options, correct };
+}
+
 function startQuiz(topicIndex) {
   const topic = TOPICS[topicIndex];
-  const questions = shuffled(topic.questions).slice(0, 10);
+  const questions = shuffled(topic.questions).slice(0, 10).map(shuffleQuestionOptions);
   data.lastTopicId = topic.id;
   saveData();
   state = {
@@ -307,6 +317,9 @@ function goFlashcardTopics() {
   render();
 }
 
+// deck.mode: "test" — перший прохід, картка закрита, треба самому торкнутись, щоб перевернути.
+// deck.mode: "review" — прохід по картках, позначених "Повторити", пояснення видно одразу,
+// картку перевертати не треба — спочатку читаєш, потім оцінюєш "знаю / ще раз повторю".
 function goFlashcardDeck(topicIndex) {
   const topic = TOPICS[topicIndex];
   const cards = (typeof FLASHCARDS !== "undefined" && FLASHCARDS[topic.id]) || [];
@@ -315,7 +328,19 @@ function goFlashcardDeck(topicIndex) {
     screen: "flashcards",
     topicIndex,
     quiz: null,
-    deck: { order, pos: 0, flipped: false },
+    deck: { order, pos: 0, flipped: false, mode: "test", knownThisRound: [], repeatThisRound: [] },
+  };
+  render();
+}
+
+function startReviewRound(indices) {
+  state.deck = {
+    order: shuffled(indices),
+    pos: 0,
+    flipped: true,
+    mode: "review",
+    knownThisRound: [],
+    repeatThisRound: [],
   };
   render();
 }
@@ -332,17 +357,20 @@ function swipeCard(result) {
       data.flashcards[topic.id].push(cardIndex);
       saveData();
     }
+    deck.knownThisRound.push(cardIndex);
+  } else {
+    deck.repeatThisRound.push(cardIndex);
   }
 
   deck.pos += 1;
-  deck.flipped = false;
+  deck.flipped = deck.mode === "review"; // у режимі повторення наступна картка теж одразу розгорнута
   render();
 }
 
 function setupCardFlipAndSwipe() {
   const wrap = document.getElementById("cardSwipeWrap");
-  const flip = document.getElementById("cardFlip");
-  if (!wrap || !flip) return;
+  const flip = document.getElementById("cardFlip"); // може бути відсутній у режимі "review" — це нормально
+  if (!wrap) return;
 
   let startX = 0;
   let startY = 0;
@@ -374,8 +402,10 @@ function setupCardFlipAndSwipe() {
     if (moved < 8 && elapsed < 400) {
       wrap.style.transition = "transform 0.2s ease";
       wrap.style.transform = "";
-      state.deck.flipped = !state.deck.flipped;
-      flip.classList.toggle("is-flipped");
+      if (flip) {
+        state.deck.flipped = !state.deck.flipped;
+        flip.classList.toggle("is-flipped");
+      }
       return;
     }
 
@@ -708,6 +738,10 @@ function renderFlashcards() {
 
   if (!deck || deck.pos >= deck.order.length) {
     const stats = flashcardStats(topic.id);
+    const knownCount = deck ? deck.knownThisRound.length : 0;
+    const repeatCount = deck ? deck.repeatThisRound.length : 0;
+    const isReviewRound = deck && deck.mode === "review";
+
     root.innerHTML = `
       <div class="quiz-header">
         <button class="back-btn" id="backBtn">‹</button>
@@ -716,45 +750,67 @@ function renderFlashcards() {
       <div class="results-card results-tone-gold">
         <div class="results-emoji">${ICONS.laurel}</div>
         <div class="results-score">${stats.known} / ${stats.total}</div>
-        <div class="results-caption">Колоду пройдено. Позначено «знаю»: ${stats.known} із ${stats.total} карток.</div>
+        <div class="results-caption">Позначено «знаю» загалом: ${stats.known} із ${stats.total} карток.</div>
       </div>
-      <button class="next-btn" id="restartDeckBtn">Пройти ще раз</button>
+      <div class="deck-round-rows">
+        <div class="deck-round-row deck-round-know">
+          <span>${ICONS.check} Знаю</span><b>${knownCount}</b>
+        </div>
+        <button class="deck-round-row deck-round-repeat" id="rowRepeat" ${repeatCount ? "" : "disabled"}>
+          <span>${ICONS.cross} Повторити</span><b>${repeatCount}</b>
+        </button>
+      </div>
+      ${repeatCount ? `<div class="footer-note">Натисни «Повторити» — покажу пояснення до цих карток і пройдемо їх ще раз</div>` : ""}
+      <button class="next-btn" id="restartDeckBtn">${isReviewRound ? "Почати колоду заново" : "Пройти ще раз"}</button>
       <button class="link-btn" id="toTopicsBtn">До вибору теми</button>
     `;
     document.getElementById("backBtn").addEventListener("click", goFlashcardTopics);
     document.getElementById("restartDeckBtn").addEventListener("click", () => goFlashcardDeck(state.topicIndex));
     document.getElementById("toTopicsBtn").addEventListener("click", goFlashcardTopics);
+    const rowRepeat = document.getElementById("rowRepeat");
+    if (rowRepeat && repeatCount) {
+      rowRepeat.addEventListener("click", () => startReviewRound(deck.repeatThisRound));
+    }
     return;
   }
 
   const cardIndex = deck.order[deck.pos];
   const card = cards[cardIndex];
   const known = (data.flashcards[topic.id] || []).includes(cardIndex);
+  const isReview = deck.mode === "review";
+
+  const cardHtml = isReview
+    ? `<div class="flashcard-review-card">
+        ${known ? `<div class="flashcard-known-badge">${ICONS.check}</div>` : ""}
+        <div class="flashcard-review-front">${escapeHtml(card.front)}</div>
+        <div class="flashcard-review-divider"></div>
+        <div class="flashcard-review-label">Пояснення</div>
+        <div class="flashcard-review-back">${escapeHtml(card.back)}</div>
+      </div>`
+    : `<div class="flashcard-flip ${deck.flipped ? "is-flipped" : ""}" id="cardFlip">
+        <div class="flashcard-face flashcard-front">
+          ${known ? `<div class="flashcard-known-badge">${ICONS.check}</div>` : ""}
+          <div class="flashcard-text">${escapeHtml(card.front)}</div>
+          <div class="flashcard-hint">Торкнись, щоб перевернути</div>
+        </div>
+        <div class="flashcard-face flashcard-back">
+          <div class="flashcard-text">${escapeHtml(card.back)}</div>
+        </div>
+      </div>`;
 
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
-      <div class="quiz-progress-text">${topic.title} · картка ${deck.pos + 1} з ${deck.order.length}</div>
+      <div class="quiz-progress-text">${topic.title} · ${isReview ? "повторення" : "картка"} ${deck.pos + 1} з ${deck.order.length}</div>
     </div>
     <div class="flashcard-scene">
-      <div class="flashcard-swipe-wrap" id="cardSwipeWrap">
-        <div class="flashcard-flip ${deck.flipped ? "is-flipped" : ""}" id="cardFlip">
-          <div class="flashcard-face flashcard-front">
-            ${known ? `<div class="flashcard-known-badge">${ICONS.check}</div>` : ""}
-            <div class="flashcard-text">${escapeHtml(card.front)}</div>
-            <div class="flashcard-hint">Торкнись, щоб перевернути</div>
-          </div>
-          <div class="flashcard-face flashcard-back">
-            <div class="flashcard-text">${escapeHtml(card.back)}</div>
-          </div>
-        </div>
-      </div>
+      <div class="flashcard-swipe-wrap" id="cardSwipeWrap">${cardHtml}</div>
     </div>
     <div class="flashcard-actions">
       <button class="flashcard-btn flashcard-btn-again" id="btnAgain">${ICONS.cross} Повторити</button>
       <button class="flashcard-btn flashcard-btn-know" id="btnKnow">${ICONS.check} Знаю</button>
     </div>
-    <div class="footer-note">Свайп картки вправо — знаю, вліво — повторити</div>
+    <div class="footer-note">${isReview ? "Пояснення вже видно — оціни, чи запам'ятав" : "Свайп картки вправо — знаю, вліво — повторити"}</div>
   `;
 
   document.getElementById("backBtn").addEventListener("click", goFlashcardTopics);
@@ -794,7 +850,18 @@ function renderQuiz() {
       <p class="question-text">${escapeHtml(question.q)}</p>
     </div>
     <div class="options-list">${optionsHtml}</div>
-    ${q.answered ? `<div class="explanation-box">${escapeHtml(question.explanation)}</div>` : ""}
+    ${
+      q.answered
+        ? (() => {
+            const wasWrong = q.selectedIndex !== question.correct;
+            return `<div class="explanation-box ${wasWrong ? "explanation-wrong" : "explanation-right"}">
+              <div class="explanation-label">${wasWrong ? "Правильна відповідь" : "Правильно"}</div>
+              ${wasWrong ? `<div class="explanation-correct-answer">${escapeHtml(question.options[question.correct])}</div>` : ""}
+              <div class="explanation-text">${escapeHtml(question.explanation)}</div>
+            </div>`;
+          })()
+        : ""
+    }
     <div style="height:16px"></div>
     <button class="next-btn" id="nextBtn" ${q.answered ? "" : "disabled"}>
       ${q.current + 1 < q.questions.length ? "Далі →" : "Завершити"}

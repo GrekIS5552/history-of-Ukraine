@@ -537,14 +537,38 @@ body::before {
 
 .explanation-box {
   margin-top: 14px;
-  padding: 10px 14px;
-  background: rgba(201, 161, 59, 0.06);
+  padding: 12px 14px;
+  border-radius: 0 4px 4px 0;
   border-left: 3px solid var(--gold);
-  border-radius: 0 3px 3px 0;
-  font-size: 13px;
-  font-style: italic;
+}
+.explanation-box.explanation-right {
+  background: var(--verdigris-bg);
+  border-left-color: var(--verdigris);
+}
+.explanation-box.explanation-wrong {
+  background: var(--wine-bg);
+  border-left-color: var(--wine);
+}
+.explanation-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: bold;
+  color: var(--hint-dim);
+  margin-bottom: 4px;
+}
+.explanation-wrong .explanation-label { color: var(--wine-soft); }
+.explanation-right .explanation-label { color: var(--verdigris-bright); }
+.explanation-correct-answer {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.explanation-text {
+  font-size: 13.5px;
   color: var(--hint);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .next-btn {
@@ -980,4 +1004,82 @@ body::before {
   text-underline-offset: 3px;
   cursor: pointer;
   padding: 8px;
+}
+
+/* Підсумок раунду карток: два рядки "Знаю" / "Повторити" */
+.deck-round-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 18px 0 4px;
+}
+.deck-round-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  background: var(--panel);
+  color: var(--text);
+  font-family: "PT Sans", sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+}
+.deck-round-know {
+  border-color: var(--verdigris);
+  color: var(--verdigris-bright);
+}
+.deck-round-repeat {
+  border-color: var(--wine-soft);
+  color: var(--wine-soft);
+  cursor: pointer;
+}
+.deck-round-repeat:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.deck-round-row span { display: flex; align-items: center; gap: 8px; }
+.deck-round-row svg { width: 16px; height: 16px; }
+
+/* Картка в режимі "повторення" — обидва боки видно одразу, без перевертання */
+.flashcard-review-card {
+  position: relative;
+  width: 100%;
+  min-height: 260px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  border-top: 2px solid var(--lapis);
+  background: var(--panel-2);
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+}
+.flashcard-review-front {
+  font-family: "PT Serif", serif;
+  font-size: 17px;
+  color: var(--text);
+  text-align: center;
+}
+.flashcard-review-divider {
+  height: 1px;
+  background: var(--hairline);
+  margin: 16px 0;
+}
+.flashcard-review-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: bold;
+  color: var(--lapis-bright);
+  margin-bottom: 6px;
+  text-align: center;
+}
+.flashcard-review-back {
+  font-family: "PT Sans", sans-serif;
+  font-size: 14.5px;
+  color: var(--hint);
+  line-height: 1.5;
+  text-align: center;
 }
