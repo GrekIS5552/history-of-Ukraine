@@ -1,0 +1,19 @@
+{
+  "name": "nmt-history-bot-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram bot backend for the НМТ Історія України Mini App: handles /start, Telegram Stars payments, premium status, and daily broadcasts.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
