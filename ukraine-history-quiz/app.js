@@ -79,7 +79,35 @@ async function buyPremium(buttonEl, tierId) {
 }
 
 // ==== Progress storage (per-device, keyed by Telegram user id) ====
+// localStorage у Telegram Mini App — ненадійне сховище: iOS/Android WebView Telegram
+// може будь-коли очистити дані сайту (оновлення застосунку, чистка кешу, переустановка),
+// і тоді "Історія проходжень" виглядає так, ніби нічого не зберігалось. Тому прогрес
+// додатково дублюється в Telegram CloudStorage (Bot API), яке належить самому акаунту
+// користувача в Telegram і не залежить від локального кешу WebView.
 const STORAGE_KEY = `uahist_progress_v2_${userId}`;
+
+const hasCloud = !!(tg && tg.CloudStorage && typeof tg.CloudStorage.setItem === "function");
+const CLOUD_KEYS = {
+  meta: "uahist_meta",
+  topics: "uahist_topics",
+  history: "uahist_history",
+};
+
+function cloudSetItem(key, value) {
+  if (!hasCloud) return;
+  try {
+    tg.CloudStorage.setItem(key, value, () => {});
+  } catch (e) {}
+}
+
+function cloudGetItems(keys, cb) {
+  if (!hasCloud) { cb({}); return; }
+  try {
+    tg.CloudStorage.getItems(keys, (err, values) => cb(!err && values ? values : {}));
+  } catch (e) {
+    cb({});
+  }
+}
 
 function defaultData() {
   return {
@@ -93,6 +121,9 @@ function defaultData() {
 }
 
 const HISTORY_LIMIT = 50;
+// CloudStorage-значення обмежені ~4096 символами, тому в хмару зберігаємо стиснуту
+// (без назви теми й відсотка — вони рахуються на льоту) і трохи коротшу історію.
+const CLOUD_HISTORY_LIMIT = 30;
 
 function loadData() {
   try {
@@ -109,6 +140,91 @@ function saveData() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {}
+  // Дублюємо найважливіше (бали по темах, лічильники, історію) у Telegram CloudStorage,
+  // щоб прогрес пережив очищення локального сховища застосунку.
+  cloudSetItem(CLOUD_KEYS.meta, JSON.stringify({
+    totalCorrectEver: data.totalCorrectEver,
+    lastTopicId: data.lastTopicId,
+    streak: data.streak,
+  }));
+  cloudSetItem(CLOUD_KEYS.topics, JSON.stringify(data.topics));
+  cloudSetItem(
+    CLOUD_KEYS.history,
+    JSON.stringify(
+      (data.history || []).slice(0, CLOUD_HISTORY_LIMIT).map((h) => ({ t: h.topicId, s: h.score, n: h.total, d: h.date }))
+    )
+  );
+}
+
+// Підтягує збережений у Telegram CloudStorage прогрес (якщо є) і доливає його в локальні
+// дані — беремо кращі/більші значення з обох джерел, нічого не затираючи даремно.
+function mergeCloudIntoData(cloudMeta, cloudTopics, cloudHistory) {
+  let changed = false;
+
+  if (cloudMeta) {
+    if ((cloudMeta.totalCorrectEver || 0) > (data.totalCorrectEver || 0)) {
+      data.totalCorrectEver = cloudMeta.totalCorrectEver;
+      changed = true;
+    }
+    if (cloudMeta.streak && (cloudMeta.streak.count || 0) > (data.streak.count || 0)) {
+      data.streak = cloudMeta.streak;
+      changed = true;
+    }
+    if (!data.lastTopicId && cloudMeta.lastTopicId) {
+      data.lastTopicId = cloudMeta.lastTopicId;
+      changed = true;
+    }
+  }
+
+  if (cloudTopics) {
+    Object.keys(cloudTopics).forEach((id) => {
+      const c = cloudTopics[id] || {};
+      const l = data.topics[id];
+      const bestScore = Math.max((l && l.bestScore) || 0, c.bestScore || 0);
+      const attempts = Math.max((l && l.attempts) || 0, c.attempts || 0);
+      if (!l || bestScore > (l.bestScore || 0) || attempts > (l.attempts || 0)) {
+        data.topics[id] = { bestScore, attempts, lastScore: c.lastScore != null ? c.lastScore : l ? l.lastScore : null };
+        changed = true;
+      }
+    });
+  }
+
+  if (Array.isArray(cloudHistory) && cloudHistory.length) {
+    const localKeys = new Set((data.history || []).map((h) => h.topicId + "|" + h.date));
+    const expanded = cloudHistory
+      .filter((h) => h && h.t && !localKeys.has(h.t + "|" + h.d))
+      .map((h) => ({
+        topicId: h.t,
+        topicTitle: (TOPICS.find((t) => t.id === h.t) || {}).title || h.t,
+        score: h.s,
+        total: h.n,
+        pct: h.n ? Math.round((h.s / h.n) * 100) : 0,
+        date: h.d,
+      }));
+    if (expanded.length) {
+      data.history = [...data.history, ...expanded]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, HISTORY_LIMIT);
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveData();
+    render();
+  }
+}
+
+function syncFromCloud() {
+  if (!hasCloud) return;
+  cloudGetItems([CLOUD_KEYS.meta, CLOUD_KEYS.topics, CLOUD_KEYS.history], (values) => {
+    try {
+      const meta = values[CLOUD_KEYS.meta] ? JSON.parse(values[CLOUD_KEYS.meta]) : null;
+      const topics = values[CLOUD_KEYS.topics] ? JSON.parse(values[CLOUD_KEYS.topics]) : null;
+      const history = values[CLOUD_KEYS.history] ? JSON.parse(values[CLOUD_KEYS.history]) : null;
+      mergeCloudIntoData(meta, topics, history);
+    } catch (e) {}
+  });
 }
 
 let data = loadData();
@@ -530,7 +646,7 @@ function renderHome() {
     <div class="stats-grid">
       <div class="stat-card stat-blue">
         <div class="stat-icon">${ICONS.shield}</div>
-        <div class="stat-value">${data.totalCorrectEver}/${totalQ}</div>
+        <div class="stat-value">${Math.min(100, Math.round((data.totalCorrectEver / totalQ) * 100))}%</div>
         <div class="stat-label">Рейтинг</div>
       </div>
       <div class="stat-card stat-green">
@@ -1016,3 +1132,4 @@ function escapeHtml(str) {
 
 render();
 fetchPremiumStatus(); // асинхронно уточнює реальний преміум-статус із бекенду і перемальовує екран
+syncFromCloud(); // підтягує прогрес/історію з Telegram CloudStorage і мерджить з локальними даними

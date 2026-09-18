@@ -18,20 +18,20 @@
      often ignores query strings on style.css/app.js/etc. The one thing that reliably forces a
      refetch is changing the URL registered with @BotFather itself (Menu Button / Mini App URL),
      because Telegram caches by the full page URL. So after any visible change:
-       1) bump every "?v=N" below to the same new N (already done for this change: v=22)
-       2) go to @BotFather → the URL of this Mini App → change it to end with "?v=22" too
+       1) bump every "?v=N" below to the same new N (already done for this change: v=23)
+       2) go to @BotFather → the URL of this Mini App → change it to end with "?v=23" too
           (same number as here) — that is what actually busts Telegram's cache, not this file alone.
      Until step 2 is done, Telegram may keep showing the old design even after a full close+reopen. -->
-<link rel="stylesheet" href="style.css?v=22" />
+<link rel="stylesheet" href="style.css?v=23" />
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
   <div id="app"></div>
 
-  <script src="config.js?v=22"></script>
-  <script src="questions.js?v=22"></script>
-  <script src="flashcards.js?v=22"></script>
-  <script src="conspects.js?v=22"></script>
-  <script src="app.js?v=22"></script>
+  <script src="config.js?v=23"></script>
+  <script src="questions.js?v=23"></script>
+  <script src="flashcards.js?v=23"></script>
+  <script src="conspects.js?v=23"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>
