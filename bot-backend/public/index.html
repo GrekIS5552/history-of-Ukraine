@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Супер-адмін · Історія України НМТ</title>
+<style>
+  :root {
+    --bg: #1c140f;
+    --panel: #2b2019;
+    --panel-2: #322419;
+    --text: #f2e8d5;
+    --hint: #b3987a;
+    --hint-dim: #7d6a53;
+    --gold: #c9a13b;
+    --gold-bright: #e0bb5c;
+    --wine: #8a2b2b;
+    --green: #4c8574;
+    --hairline: #4a3a2a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PT Sans", Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 18px 60px; }
+  h1 {
+    font-family: "PT Serif", serif;
+    font-size: 22px;
+    margin: 0 0 4px;
+    color: var(--gold-bright);
+  }
+  .subtitle { color: var(--hint); font-size: 13px; margin-bottom: 24px; }
+
+  /* ---- Login gate ---- */
+  #loginScreen {
+    max-width: 360px;
+    margin: 80px auto;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 28px;
+    text-align: center;
+  }
+  #loginScreen input {
+    width: 100%;
+    padding: 10px 12px;
+    margin: 14px 0;
+    background: var(--panel-2);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  #loginScreen button, .refresh-btn {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--gold);
+    border: none;
+    border-radius: 4px;
+    color: #201810;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #loginScreen .err { color: #d97a6a; font-size: 12px; min-height: 16px; margin-top: 6px; }
+
+  #dashboard { display: none; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .stat-card .label { font-size: 11px; color: var(--hint-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-card .value { font-size: 22px; font-weight: bold; color: var(--gold-bright); margin-top: 4px; }
+
+  .section { margin-bottom: 32px; }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .section-head h2 { font-size: 15px; margin: 0; color: var(--text); }
+  .refresh-btn { width: auto; padding: 6px 12px; font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--hairline);
+    white-space: nowrap;
+  }
+  th { color: var(--hint-dim); font-weight: normal; font-size: 11px; text-transform: uppercase; }
+  tr:hover td { background: var(--panel-2); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .badge-premium { background: rgba(76,133,116,0.25); color: #7fbfa9; }
+  .badge-free { background: rgba(255,255,255,0.06); color: var(--hint-dim); }
+  .table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--hairline); border-radius: 6px; }
+  .empty-note { color: var(--hint-dim); font-size: 13px; padding: 16px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="loginScreen">
+    <h1>Супер-адмін</h1>
+    <div class="subtitle">Історія України · Тренажер НМТ</div>
+    <input type="password" id="secretInput" placeholder="Admin secret" />
+    <button onclick="tryLogin()">Увійти</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <div id="dashboard">
+    <h1>Супер-адмін</h1>
+    <div class="subtitle">Користувачі, оплати, статистика</div>
+
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Користувачі</h2>
+        <button class="refresh-btn" onclick="loadAll()">Оновити</button>
+      </div>
+      <div class="table-wrap">
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Юзернейм</th><th>Ім'я</th><th>Статус</th>
+              <th>Преміум до</th><th>Заплачено (⭐)</th><th>Платежів</th><th>Остання активність</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty-note" id="usersEmpty" style="display:none">Поки що немає користувачів.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Платежі</h2></div>
+      <div class="table-wrap">
+        <table id="paymentsTable">
+          <thead>
+            <tr><th>Дата</th><th>Користувач</th><th>ID</th><th>Сума (⭐)</th><th>Charge ID</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty-note" id="paymentsEmpty" style="display:none">Поки що немає платежів.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let secret = "";
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("uk-UA") + " " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  async function api(url) {
+    const res = await fetch(url, { headers: { "X-Admin-Secret": secret } });
+    if (res.status === 403) throw new Error("403");
+    return res.json();
+  }
+
+  async function tryLogin() {
+    secret = document.getElementById("secretInput").value.trim();
+    if (!secret) return;
+    try {
+      await api(apiBase() + "/stats");
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      sessionStorage.setItem("admin_secret_session", secret);
+      loadAll();
+    } catch (e) {
+      document.getElementById("loginErr").textContent = "Невірний секрет.";
+    }
+  }
+
+  // Ця сторінка сама лежить під /admin/, тож API-ендпоінти — на рівень вище (той самий origin, шлях /admin/...).
+  function apiBase() {
+    return window.location.origin + "/admin";
+  }
+
+  async function loadAll() {
+    const [stats, usersRes, paymentsRes] = await Promise.all([
+      api(apiBase() + "/stats"),
+      api(apiBase() + "/users"),
+      api(apiBase() + "/payments"),
+    ]);
+    renderStats(stats);
+    renderUsers(usersRes.users || []);
+    renderPayments(paymentsRes.payments || []);
+  }
+
+  function renderStats(s) {
+    const items = [
+      { label: "Усього користувачів", value: s.usersTotal },
+      { label: "Преміум зараз", value: s.usersPremiumNow },
+      { label: "Активні за 7 днів", value: s.activeUsers7d },
+      { label: "⭐ всього отримано", value: s.totalStarsAllTime },
+      { label: "⭐ за 7 днів", value: s.starsLast7d },
+      { label: "Платежів за 7 днів", value: s.paymentsLast7d },
+    ];
+    document.getElementById("statsGrid").innerHTML = items
+      .map((i) => `<div class="stat-card"><div class="label">${i.label}</div><div class="value">${i.value}</div></div>`)
+      .join("");
+  }
+
+  function renderUsers(users) {
+    const tbody = document.querySelector("#usersTable tbody");
+    document.getElementById("usersEmpty").style.display = users.length ? "none" : "block";
+    tbody.innerHTML = users
+      .map(
+        (u) => `
+      <tr>
+        <td>${u.telegramId}</td>
+        <td>${u.username ? "@" + u.username : "—"}</td>
+        <td>${u.firstName || "—"}</td>
+        <td><span class="badge ${u.isPremium ? "badge-premium" : "badge-free"}">${u.isPremium ? "Преміум" : "Free"}</span></td>
+        <td>${u.premiumUntil ? fmtDate(u.premiumUntil) : "—"}</td>
+        <td>${u.totalStarsPaid}</td>
+        <td>${u.paymentsCount}</td>
+        <td>${fmtDate(u.lastActive)}</td>
+      </tr>`
+      )
+      .join("");
+  }
+
+  function renderPayments(payments) {
+    const tbody = document.querySelector("#paymentsTable tbody");
+    document.getElementById("paymentsEmpty").style.display = payments.length ? "none" : "block";
+    tbody.innerHTML = payments
+      .map(
+        (p) => `
+      <tr>
+        <td>${fmtDate(p.createdAt)}</td>
+        <td>${p.username ? "@" + p.username : p.firstName || "—"}</td>
+        <td>${p.telegramId}</td>
+        <td>${p.amountStars}</td>
+        <td>${p.chargeId}</td>
+      </tr>`
+      )
+      .join("");
+  }
+
+  // Автоматично увійти, якщо секрет уже збережений у цій сесії браузера.
+  (function initAutoLogin() {
+    const saved = sessionStorage.getItem("admin_secret_session");
+    if (saved) {
+      document.getElementById("secretInput").value = saved;
+      tryLogin();
+    }
+  })();
+</script>
+</body>
+</html>

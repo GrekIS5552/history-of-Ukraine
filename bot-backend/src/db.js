@@ -113,3 +113,87 @@ export async function getPremiumStatus(telegramId) {
   const isPremium = !!user.is_premium && user.premium_until && new Date(user.premium_until) > new Date();
   return { isPremium, premiumUntil: user.premium_until ?? null };
 }
+
+// ==== Супер-адмін: список користувачів, платежів, зведена статистика ====
+
+// Повний список користувачів + скільки кожен заплатив і чи преміум зараз активний "по факту" (не лише прапорець).
+export async function listAllUsersWithStats() {
+  const res = await db.execute(`
+    SELECT
+      u.telegram_id,
+      u.username,
+      u.first_name,
+      u.is_premium,
+      u.premium_until,
+      u.write_access,
+      u.created_at,
+      u.last_active,
+      COALESCE(p.total_stars, 0) AS total_stars_paid,
+      COALESCE(p.payments_count, 0) AS payments_count
+    FROM users u
+    LEFT JOIN (
+      SELECT telegram_id, SUM(amount_stars) AS total_stars, COUNT(*) AS payments_count
+      FROM payments
+      GROUP BY telegram_id
+    ) p ON p.telegram_id = u.telegram_id
+    ORDER BY u.last_active DESC
+  `);
+  const now = new Date();
+  return res.rows.map((r) => ({
+    telegramId: r.telegram_id,
+    username: r.username,
+    firstName: r.first_name,
+    isPremium: !!r.is_premium && r.premium_until && new Date(r.premium_until) > now,
+    premiumUntil: r.premium_until ?? null,
+    writeAccess: !!r.write_access,
+    createdAt: r.created_at,
+    lastActive: r.last_active,
+    totalStarsPaid: Number(r.total_stars_paid) || 0,
+    paymentsCount: Number(r.payments_count) || 0,
+  }));
+}
+
+// Повна історія платежів, найновіші перші.
+export async function listAllPayments() {
+  const res = await db.execute(`
+    SELECT p.*, u.username, u.first_name
+    FROM payments p
+    LEFT JOIN users u ON u.telegram_id = p.telegram_id
+    ORDER BY p.created_at DESC
+  `);
+  return res.rows.map((r) => ({
+    id: r.id,
+    telegramId: r.telegram_id,
+    username: r.username,
+    firstName: r.first_name,
+    chargeId: r.telegram_payment_charge_id,
+    amountStars: r.amount_stars,
+    createdAt: r.created_at,
+  }));
+}
+
+// Зведена статистика для верхньої панелі дашборду.
+export async function getStats() {
+  const now = new Date().toISOString();
+  const [usersTotal, usersPremiumNow, revenue, payments7d, activeUsers7d] = await Promise.all([
+    db.execute(`SELECT COUNT(*) AS c FROM users`),
+    db.execute({ sql: `SELECT COUNT(*) AS c FROM users WHERE is_premium = 1 AND premium_until > ?`, args: [now] }),
+    db.execute(`SELECT COALESCE(SUM(amount_stars), 0) AS total FROM payments`),
+    db.execute({
+      sql: `SELECT COALESCE(SUM(amount_stars), 0) AS total, COUNT(*) AS c FROM payments WHERE created_at >= ?`,
+      args: [new Date(Date.now() - 7 * 86400000).toISOString()],
+    }),
+    db.execute({
+      sql: `SELECT COUNT(*) AS c FROM users WHERE last_active >= ?`,
+      args: [new Date(Date.now() - 7 * 86400000).toISOString()],
+    }),
+  ]);
+  return {
+    usersTotal: Number(usersTotal.rows[0].c) || 0,
+    usersPremiumNow: Number(usersPremiumNow.rows[0].c) || 0,
+    activeUsers7d: Number(activeUsers7d.rows[0].c) || 0,
+    totalStarsAllTime: Number(revenue.rows[0].total) || 0,
+    starsLast7d: Number(payments7d.rows[0].total) || 0,
+    paymentsLast7d: Number(payments7d.rows[0].c) || 0,
+  };
+}

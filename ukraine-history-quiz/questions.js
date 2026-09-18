@@ -734,4 +734,14 @@ const TOPICS = [
   },
 ];
 
-if (typeof module !== "undefined") { module.exports = TOPICS; }
+// ==== Місце під майбутнє розширення на інші шкільні предмети ====
+// Зараз весь застосунок (app.js) працює напряму з TOPICS — це не чіпаємо, щоб нічого не зламати.
+// Коли з'явиться другий предмет, для нього створюється свій файл на кшталт questions-geography.js
+// з такою самою структурою (const TOPICS_GEOGRAPHY = [...]), і обидва додаються сюди, у SUBJECTS.
+// app.js тоді зможе показувати екран вибору предмета й брати topics із SUBJECTS[i].topics
+// замість того, щоб завжди використовувати саме TOPICS.
+const SUBJECTS = [
+  { id: "history", title: "Історія України", topics: TOPICS },
+];
+
+if (typeof module !== "undefined") { module.exports = TOPICS; module.exports.SUBJECTS = SUBJECTS; }

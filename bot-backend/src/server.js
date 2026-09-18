@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   initDb,
   upsertUser,
@@ -9,8 +11,13 @@ import {
   recordPayment,
   getPremiumStatus,
   listActiveUserIds,
+  listAllUsersWithStats,
+  listAllPayments,
+  getStats,
 } from "./db.js";
 import { sendMessage, sendInvoice, answerPreCheckoutQuery, setWebhook, getWebhookInfo } from "./telegram.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(express.json());
@@ -158,6 +165,26 @@ app.get("/admin/webhook-info", requireAdmin, async (req, res) => {
   const info = await getWebhookInfo();
   res.json(info);
 });
+
+// ==== Супер-адмін API: користувачі, платежі, зведена статистика ====
+app.get("/admin/stats", requireAdmin, async (req, res) => {
+  const stats = await getStats();
+  res.json(stats);
+});
+
+app.get("/admin/users", requireAdmin, async (req, res) => {
+  const users = await listAllUsersWithStats();
+  res.json({ users });
+});
+
+app.get("/admin/payments", requireAdmin, async (req, res) => {
+  const payments = await listAllPayments();
+  res.json({ payments });
+});
+
+// Статична сторінка супер-адмін дашборду (пароль вводиться прямо на сторінці —
+// вона сама шле той самий X-Admin-Secret до /admin/* ендпоінтів вище).
+app.use("/admin", express.static(path.join(__dirname, "..", "public")));
 
 const PORT = process.env.PORT || 3000;
 

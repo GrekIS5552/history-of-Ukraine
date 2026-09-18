@@ -6,6 +6,23 @@ if (tg) {
   try { tg.setHeaderColor && tg.setHeaderColor("secondary_bg_color"); } catch (e) {}
 }
 
+// Застосунок працює лише як Telegram Mini App — якщо відкрито просто в браузері
+// (немає window.Telegram.WebApp), показуємо заглушку й далі нічого не виконуємо.
+if (!tg) {
+  const el = document.getElementById("app");
+  if (el) {
+    el.innerHTML = `
+      <div class="telegram-only-screen">
+        <div class="telegram-only-icon">
+          <svg viewBox="0 0 34 34" fill="none"><rect x="8" y="15" width="18" height="14" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M12 15 V10 a5 5 0 0 1 10 0 v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <h1>Доступно лише в Telegram</h1>
+        <p>Цей тренажер працює як Mini App усередині Telegram. Відкрий бота і натисни кнопку меню, щоб почати.</p>
+      </div>`;
+  }
+  throw new Error("Not running inside Telegram WebApp — app halted.");
+}
+
 const currentUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
 const userId = currentUser ? currentUser.id : "guest";
 const isOwner = CONFIG.OWNER_TELEGRAM_IDS.includes(userId);
