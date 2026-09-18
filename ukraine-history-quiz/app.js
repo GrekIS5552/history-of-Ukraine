@@ -271,7 +271,7 @@ function renderHome() {
 
     <div class="hero-card">
       <div class="hero-icon">${ICONS.emblem}</div>
-      <div class="hero-title">Літопис Історії України</div>
+      <div class="hero-title">Історія України · Тренажер НМТ</div>
       <div class="hero-subtitle">14 розділів. Понад ${totalQ} запитань.<br>Готуйся до НМТ крок за кроком.</div>
     </div>
 
@@ -290,7 +290,7 @@ function renderHome() {
         : ""
     }
 
-    <div class="section-title">Мій поступ</div>
+    <div class="section-title">Мій прогрес</div>
     <div class="stats-grid">
       <div class="stat-card stat-blue">
         <div class="stat-icon">${ICONS.shield}</div>
@@ -316,7 +316,7 @@ function renderHome() {
 
     <button class="history-link-btn" id="historyLinkBtn">
       <span>${ICONS.scroll}</span>
-      <span style="flex:1; text-align:left;">Хроніка проходжень</span>
+      <span style="flex:1; text-align:left;">Історія проходжень</span>
       <span>${data.history.length ? data.history.length : ""}</span>
       <span class="continue-arrow">›</span>
     </button>
@@ -428,7 +428,7 @@ function renderHistory() {
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
-      <div class="quiz-progress-text">Хроніка проходжень</div>
+      <div class="quiz-progress-text">Історія проходжень</div>
     </div>
     <div class="history-list">${listHtml}</div>
     ${history.length ? `<div class="footer-note">Останні ${history.length} із ${HISTORY_LIMIT} записів, що зберігаються</div>` : ""}
@@ -461,7 +461,7 @@ function renderQuiz() {
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
-      <div class="quiz-progress-text">${topic.title} · Питання ${q.current + 1} з ${q.questions.length} · Бал ${q.score}</div>
+      <div class="quiz-progress-text">${topic.title} · питання ${q.current + 1} з ${q.questions.length} · бал ${q.score}</div>
     </div>
     <div class="question-card">
       ${question.img ? `<div class="question-image-wrap"><img class="question-image" src="${escapeHtml(question.img)}" alt="Ілюстрація до питання" loading="lazy" /></div>` : ""}
