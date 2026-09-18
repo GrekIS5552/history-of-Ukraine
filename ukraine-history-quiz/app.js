@@ -47,11 +47,12 @@ async function fetchPremiumStatus() {
 }
 
 // Купівля преміуму кнопкою прямо в застосунку (Telegram Stars), без команди боту.
-async function buyPremium(buttonEl) {
+// tierId — один із CONFIG.PRICING_TIERS ("month" / "year" / "lifetime").
+async function buyPremium(buttonEl, tierId) {
   if (!CONFIG.BACKEND_URL || userId === "guest") return;
-  if (buttonEl) { buttonEl.disabled = true; buttonEl.textContent = "Зачекай…"; }
+  if (buttonEl) { buttonEl.disabled = true; buttonEl.classList.add("is-loading"); }
   try {
-    const res = await fetch(`${CONFIG.BACKEND_URL}/api/premium-link/${userId}`);
+    const res = await fetch(`${CONFIG.BACKEND_URL}/api/premium-link/${userId}/${tierId}`);
     const data2 = await res.json();
     if (data2.alreadyPremium) {
       isPremiumUser = true;
@@ -65,13 +66,13 @@ async function buyPremium(buttonEl) {
         fetchPremiumStatus();
       } else if (buttonEl) {
         buttonEl.disabled = false;
-        buttonEl.textContent = "Розблокувати за Stars";
+        buttonEl.classList.remove("is-loading");
       }
     });
   } catch (e) {
     if (buttonEl) {
       buttonEl.disabled = false;
-      buttonEl.textContent = "Розблокувати за Stars";
+      buttonEl.classList.remove("is-loading");
     }
     if (tg.showAlert) tg.showAlert("Не вдалося створити рахунок. Спробуй трохи пізніше.");
   }
@@ -467,6 +468,17 @@ function renderHome() {
         : ""
     }
 
+    ${
+      CONFIG.MONETIZATION_ENABLED && !isOwner && !isPremiumUser && CONFIG.PRICING_TIERS
+        ? `<div class="pricing-teaser" id="pricingTeaser">
+            <div class="pricing-teaser-title">Повний доступ до всіх розділів</div>
+            <div class="pricing-teaser-row">
+              ${CONFIG.PRICING_TIERS.map((t) => `<div class="pricing-teaser-chip"><span>${t.title}</span><b>${t.stars} ⭐</b></div>`).join("")}
+            </div>
+          </div>`
+        : ""
+    }
+
     <div class="section-title">Мій прогрес</div>
     <div class="stats-grid">
       <div class="stat-card stat-blue">
@@ -510,6 +522,8 @@ function renderHome() {
   document.getElementById("chooseTopicBtn").addEventListener("click", goTopics);
   document.getElementById("flashcardsLinkBtn").addEventListener("click", goFlashcardTopics);
   document.getElementById("historyLinkBtn").addEventListener("click", goHistory);
+  const pricingTeaser = document.getElementById("pricingTeaser");
+  if (pricingTeaser) pricingTeaser.addEventListener("click", goTopics);
   const continueCard = document.getElementById("continueCard");
   if (continueCard) {
     continueCard.addEventListener("click", () => {
@@ -571,6 +585,19 @@ function renderTopics() {
 
 function renderLocked() {
   const topic = TOPICS[state.topicIndex];
+  const tiers = CONFIG.PRICING_TIERS || [];
+
+  const tiersHtml = tiers
+    .map(
+      (tier) => `
+      <button class="tier-btn" data-tier-id="${tier.id}">
+        <span class="tier-btn-title">${tier.title}</span>
+        <span class="tier-btn-hint">${tier.hint}</span>
+        <span class="tier-btn-price">${tier.stars} ⭐</span>
+      </button>`
+    )
+    .join("");
+
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
@@ -579,12 +606,14 @@ function renderLocked() {
     <div class="paywall-card">
       <div class="icon">${ICONS.seal}</div>
       <h2>Цей розділ — преміум</h2>
-      <p>Розблокуй усі розділи на 30 днів за Telegram Stars — оплата одразу тут, без переходу в чат із ботом.</p>
-      <button class="next-btn" id="buyBtn">Розблокувати за Stars</button>
+      <p>Розблокуй усі розділи за Telegram Stars — оплата одразу тут, без переходу в чат із ботом. Обери тариф:</p>
+      <div class="tiers-list">${tiersHtml}</div>
     </div>
   `;
   document.getElementById("backBtn").addEventListener("click", goTopics);
-  document.getElementById("buyBtn").addEventListener("click", (e) => buyPremium(e.currentTarget));
+  document.querySelectorAll(".tier-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => buyPremium(e.currentTarget, e.currentTarget.dataset.tierId));
+  });
 }
 
 function renderHistory() {

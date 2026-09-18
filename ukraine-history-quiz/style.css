@@ -649,6 +649,82 @@ body::before {
 .paywall-card h2 { font-family: "PT Serif", serif; font-size: 16px; margin: 0 0 8px; }
 .paywall-card p { font-size: 13.5px; color: var(--hint); margin: 0 0 16px; line-height: 1.45; }
 
+.tiers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tier-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1.5px solid var(--gold);
+  border-radius: var(--card-radius);
+  color: var(--text);
+  font-family: "PT Sans", sans-serif;
+  cursor: pointer;
+  text-align: left;
+}
+.tier-btn.is-loading { opacity: 0.6; }
+
+.tier-btn-title {
+  font-weight: bold;
+  font-size: 14.5px;
+  min-width: 76px;
+}
+.tier-btn-hint {
+  flex: 1;
+  font-size: 12px;
+  color: var(--hint);
+}
+.tier-btn-price {
+  font-weight: bold;
+  font-size: 14.5px;
+  color: var(--gold-bright);
+  white-space: nowrap;
+}
+
+.pricing-teaser {
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: var(--card-radius);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  cursor: pointer;
+}
+.pricing-teaser-title {
+  font-size: 12.5px;
+  color: var(--hint);
+  margin-bottom: 10px;
+}
+.pricing-teaser-row {
+  display: flex;
+  gap: 8px;
+}
+.pricing-teaser-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: var(--panel-2);
+  border-radius: 4px;
+  text-align: center;
+}
+.pricing-teaser-chip span {
+  font-size: 11px;
+  color: var(--hint);
+}
+.pricing-teaser-chip b {
+  font-size: 13px;
+  color: var(--gold-bright);
+}
+
 .footer-note {
   margin-top: auto;
   padding-top: 18px;

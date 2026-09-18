@@ -16,6 +16,7 @@ import {
   getStats,
 } from "./db.js";
 import { sendMessage, sendInvoice, createInvoiceLink, answerPreCheckoutQuery, setWebhook, getWebhookInfo } from "./telegram.js";
+import { PRICING_TIERS, findTier } from "./pricing.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -26,8 +27,6 @@ app.use(
     origin: process.env.FRONTEND_ORIGIN || "*",
   })
 );
-
-const PREMIUM_PRICE_STARS = Number(process.env.PREMIUM_PRICE_STARS || 300);
 
 // ==== Health check (Render перевіряє цим, чи сервіс живий) ====
 app.get("/health", (req, res) => res.json({ ok: true }));
@@ -72,23 +71,28 @@ async function handleUpdate(update) {
         await sendMessage(chatId, `У тебе вже є преміум-доступ до ${new Date(status.premiumUntil).toLocaleDateString("uk-UA")}.`);
         return;
       }
-      await sendInvoice(chatId, {
-        title: "Преміум-доступ на 30 днів",
-        description: "Усі 14 розділів і 600+ питань без обмежень протягом 30 днів.",
-        payload: `premium_30d_${from.id}_${Date.now()}`,
-        amountStars: PREMIUM_PRICE_STARS,
-      });
+      await sendMessage(
+        chatId,
+        "Відкрий застосунок (кнопка меню внизу) і натисни «Розблокувати за Stars» на будь-якому закритому розділі — там можна обрати тариф: місяць, рік або назавжди."
+      );
       return;
     }
 
     if (msg.successful_payment) {
-      const until = await grantPremium(from.id, 30);
+      // payload має вигляд "premium_<tierId>_<telegramId>_<timestamp>"
+      const payload = msg.successful_payment.invoice_payload || "";
+      const tierId = payload.split("_")[1];
+      const tier = findTier(tierId) || PRICING_TIERS[0];
+
+      const until = await grantPremium(from.id, tier.days);
       await recordPayment({
         telegramId: from.id,
         chargeId: msg.successful_payment.telegram_payment_charge_id,
         amountStars: msg.successful_payment.total_amount,
       });
-      await sendMessage(chatId, `Дякую! Преміум-доступ активовано до ${new Date(until).toLocaleDateString("uk-UA")}. Гарного навчання!`);
+
+      const untilText = tier.id === "lifetime" ? "назавжди" : `до ${new Date(until).toLocaleDateString("uk-UA")}`;
+      await sendMessage(chatId, `Дякую! Преміум-доступ (тариф «${tier.title}») активовано ${untilText}. Гарного навчання!`);
       return;
     }
 
@@ -120,21 +124,29 @@ app.get("/api/status/:telegramId", async (req, res) => {
   res.json(status);
 });
 
-// Створює посилання на оплату Stars для кнопки прямо в Mini App
-// (фронтенд викликає це, а потім відкриває отримане посилання через
+// Список тарифів — фронтенд бере звідси назви й ціни для кнопок вибору тарифу.
+app.get("/api/pricing", (req, res) => {
+  res.json({ tiers: PRICING_TIERS });
+});
+
+// Створює посилання на оплату Stars для конкретного тарифу (кнопка прямо в Mini App —
+// фронтенд викликає це, а потім відкриває отримане посилання через
 // Telegram.WebApp.openInvoice — оплата без жодної команди боту).
-app.get("/api/premium-link/:telegramId", async (req, res) => {
+app.get("/api/premium-link/:telegramId/:tierId", async (req, res) => {
   const telegramId = Number(req.params.telegramId);
   if (!Number.isFinite(telegramId)) return res.status(400).json({ error: "bad telegramId" });
+
+  const tier = findTier(req.params.tierId);
+  if (!tier) return res.status(400).json({ error: "bad tier" });
 
   const status = await getPremiumStatus(telegramId);
   if (status.isPremium) return res.json({ alreadyPremium: true, premiumUntil: status.premiumUntil });
 
   const result = await createInvoiceLink({
-    title: "Преміум-доступ на 30 днів",
-    description: "Усі 14 розділів і 600+ питань без обмежень протягом 30 днів.",
-    payload: `premium_30d_${telegramId}_${Date.now()}`,
-    amountStars: PREMIUM_PRICE_STARS,
+    title: `Преміум-доступ: ${tier.title}`,
+    description: tier.description,
+    payload: `premium_${tier.id}_${telegramId}_${Date.now()}`,
+    amountStars: tier.stars,
   });
   if (!result.ok) return res.status(502).json({ error: "telegram_error", description: result.description });
   res.json({ link: result.result });
