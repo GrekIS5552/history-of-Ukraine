@@ -6,21 +6,21 @@ export const PRICING_TIERS = [
   {
     id: "month",
     title: "Місяць",
-    stars: 50,
+    stars: 25,
     days: 30,
     description: "Повний доступ до всіх розділів на 30 днів.",
   },
   {
     id: "year",
     title: "Рік",
-    stars: 250,
+    stars: 75,
     days: 365,
     description: "Повний доступ до всіх розділів на 365 днів.",
   },
   {
     id: "lifetime",
     title: "Назавжди",
-    stars: 400,
+    stars: 100,
     days: 36500, // умовно «назавжди» (100 років) — простіше зберігати як звичайну дату, ніж окремий null-кейс
     description: "Повний доступ до всіх розділів без обмеження в часі.",
   },

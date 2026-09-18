@@ -301,6 +301,21 @@ function goHistory() {
   render();
 }
 
+// ==== Конспекти ====
+function conspectTopicIds() {
+  return TOPICS.map((t) => t.id).filter((id) => typeof CONSPECTS !== "undefined" && CONSPECTS[id]);
+}
+
+function goConspectTopics() {
+  state = { screen: "conspectTopics", topicIndex: null, quiz: null };
+  render();
+}
+
+function goConspect(topicIndex) {
+  state = { screen: "conspect", topicIndex, quiz: null };
+  render();
+}
+
 // ==== Флешкартки ====
 function flashcardTopicIds() {
   return TOPICS.map((t) => t.id).filter((id) => typeof FLASHCARDS !== "undefined" && Array.isArray(FLASHCARDS[id]) && FLASHCARDS[id].length);
@@ -450,6 +465,8 @@ function render() {
   if (state.screen === "history") return renderHistory();
   if (state.screen === "flashcardTopics") return renderFlashcardTopics();
   if (state.screen === "flashcards") return renderFlashcards();
+  if (state.screen === "conspectTopics") return renderConspectTopics();
+  if (state.screen === "conspect") return renderConspect();
 }
 
 function avatarHtml(size) {
@@ -533,6 +550,12 @@ function renderHome() {
       </div>
     </div>
 
+    <button class="history-link-btn" id="conspectsLinkBtn">
+      <span>${ICONS.scroll}</span>
+      <span style="flex:1; text-align:left;">Конспекти</span>
+      <span class="continue-arrow">›</span>
+    </button>
+
     <button class="history-link-btn" id="flashcardsLinkBtn">
       <span>${ICONS.book}</span>
       <span style="flex:1; text-align:left;">Картки для повторення</span>
@@ -550,6 +573,7 @@ function renderHome() {
   `;
 
   document.getElementById("chooseTopicBtn").addEventListener("click", goTopics);
+  document.getElementById("conspectsLinkBtn").addEventListener("click", goConspectTopics);
   document.getElementById("flashcardsLinkBtn").addEventListener("click", goFlashcardTopics);
   document.getElementById("historyLinkBtn").addEventListener("click", goHistory);
   const pricingTeaser = document.getElementById("pricingTeaser");
@@ -817,6 +841,83 @@ function renderFlashcards() {
   document.getElementById("btnAgain").addEventListener("click", () => swipeCard("again"));
   document.getElementById("btnKnow").addEventListener("click", () => swipeCard("know"));
   setupCardFlipAndSwipe();
+}
+
+function renderConspectTopics() {
+  const availableIds = conspectTopicIds();
+  let topicsHtml = "";
+  TOPICS.forEach((topic, idx) => {
+    const hasConspect = availableIds.includes(topic.id);
+    const locked = hasConspect && topicIsLocked(idx);
+    topicsHtml += `
+      <div class="topic-card ${!hasConspect || locked ? "topic-locked" : ""}" data-topic-index="${idx}" data-has-conspect="${hasConspect ? "1" : "0"}">
+        <div class="topic-icon">${toRoman(idx + 1)}</div>
+        <div class="topic-info">
+          <p class="topic-title">${topic.title}</p>
+          <p class="topic-period">${topic.period}</p>
+          ${
+            !hasConspect
+              ? `<span class="lock-badge">Конспект скоро</span>`
+              : locked
+              ? `<span class="lock-badge">Premium · Stars</span>`
+              : `<span class="topic-progress-pct">Читати →</span>`
+          }
+        </div>
+      </div>`;
+  });
+
+  root.innerHTML = `
+    <div class="quiz-header">
+      <button class="back-btn" id="backBtn">‹</button>
+      <div class="quiz-progress-text">Конспекти</div>
+    </div>
+    <div class="topics-list">${topicsHtml}</div>
+    <div class="footer-note">Основна інформація по темі й короткий висновок</div>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goHome);
+  document.querySelectorAll(".topic-card[data-has-conspect='1']").forEach((el) => {
+    el.addEventListener("click", () => {
+      const idx = Number(el.dataset.topicIndex);
+      if (topicIsLocked(idx)) {
+        state = { screen: "locked", topicIndex: idx, quiz: null };
+        render();
+      } else {
+        goConspect(idx);
+      }
+    });
+  });
+}
+
+function renderConspect() {
+  const topic = TOPICS[state.topicIndex];
+  const conspect = (typeof CONSPECTS !== "undefined" && CONSPECTS[topic.id]) || null;
+
+  if (!conspect) {
+    // Захист про всяк випадок — сюди не мали б потрапити, бо в списку тем такі не клікабельні.
+    goConspectTopics();
+    return;
+  }
+
+  const paragraphsHtml = conspect.paragraphs.map((p) => `<p class="conspect-paragraph">${escapeHtml(p)}</p>`).join("");
+
+  root.innerHTML = `
+    <div class="quiz-header">
+      <button class="back-btn" id="backBtn">‹</button>
+      <div class="quiz-progress-text">${topic.title}</div>
+    </div>
+    <div class="conspect-body">
+      ${paragraphsHtml}
+      <div class="conspect-conclusion">${escapeHtml(conspect.conclusion)}</div>
+    </div>
+    <div style="height:16px"></div>
+    <button class="next-btn" id="toQuizBtn">Перевірити себе тестом</button>
+    <button class="link-btn" id="toTopicsBtn">До вибору теми</button>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goConspectTopics);
+  document.getElementById("toTopicsBtn").addEventListener("click", goConspectTopics);
+  document.getElementById("toQuizBtn").addEventListener("click", () => startQuiz(state.topicIndex));
 }
 
 function renderQuiz() {

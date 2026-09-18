@@ -1083,3 +1083,27 @@ body::before {
   line-height: 1.5;
   text-align: center;
 }
+
+/* Конспекти */
+.conspect-body {
+  padding: 4px 2px 8px;
+}
+.conspect-paragraph {
+  font-family: "PT Sans", sans-serif;
+  font-size: 14.5px;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0 0 14px;
+}
+.conspect-conclusion {
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: var(--gold-bg, rgba(201, 161, 59, 0.1));
+  border-left: 3px solid var(--gold);
+  border-radius: 0 4px 4px 0;
+  font-family: "PT Serif", serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--gold-bright);
+  line-height: 1.55;
+}
