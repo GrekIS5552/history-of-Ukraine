@@ -1,0 +1,313 @@
+:root {
+  --bg: var(--tg-theme-bg-color, #0f1115);
+  --secondary-bg: var(--tg-theme-secondary-bg-color, #171a21);
+  --text: var(--tg-theme-text-color, #f2f2f2);
+  --hint: var(--tg-theme-hint-color, #8b909a);
+  --link: var(--tg-theme-link-color, #4ea1ff);
+  --button: var(--tg-theme-button-color, #3390ec);
+  --button-text: var(--tg-theme-button-text-color, #ffffff);
+  --accent-gold: #ffcf40;
+  --accent-blue: #4ea1ff;
+  --correct: #34c759;
+  --wrong: #ff4b4b;
+  --card-radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px 16px;
+}
+
+.header h1 {
+  font-size: 18px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.header .subtitle {
+  font-size: 13px;
+  color: var(--hint);
+  margin-top: 2px;
+}
+
+.overall-progress {
+  background: var(--secondary-bg);
+  border-radius: var(--card-radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.overall-progress .label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--hint);
+  margin-bottom: 8px;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
+  border-radius: 5px;
+  transition: width .4s ease;
+}
+
+.topics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.topic-card {
+  background: var(--secondary-bg);
+  border-radius: var(--card-radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color .15s ease, transform .1s ease;
+}
+
+.topic-card:active { transform: scale(0.98); }
+
+.topic-icon {
+  font-size: 26px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.topic-info { flex: 1; min-width: 0; }
+
+.topic-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.topic-period {
+  font-size: 12px;
+  color: var(--hint);
+  margin: 0 0 8px;
+}
+
+.topic-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topic-progress-row .progress-bar { flex: 1; }
+
+.topic-progress-pct {
+  font-size: 12px;
+  color: var(--hint);
+  min-width: 32px;
+  text-align: right;
+}
+
+.topic-locked {
+  opacity: 0.55;
+}
+
+.lock-badge {
+  font-size: 11px;
+  background: rgba(255, 207, 64, 0.15);
+  color: var(--accent-gold);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.best-badge {
+  font-size: 11px;
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--correct);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* Quiz screen */
+.quiz-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.back-btn {
+  background: var(--secondary-bg);
+  border: none;
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.quiz-progress-text {
+  font-size: 13px;
+  color: var(--hint);
+}
+
+.question-card {
+  background: var(--secondary-bg);
+  border-radius: var(--card-radius);
+  padding: 18px 16px;
+  margin-bottom: 16px;
+}
+
+.question-text {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 4px;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option-btn {
+  text-align: left;
+  background: var(--secondary-bg);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  color: var(--text);
+  padding: 13px 14px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.option-btn:active { transform: scale(0.99); }
+
+.option-btn.correct {
+  border-color: var(--correct);
+  background: rgba(52, 199, 89, 0.12);
+}
+
+.option-btn.wrong {
+  border-color: var(--wrong);
+  background: rgba(255, 75, 75, 0.12);
+}
+
+.option-btn.disabled { pointer-events: none; }
+
+.explanation-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  font-size: 13.5px;
+  color: var(--hint);
+  line-height: 1.4;
+}
+
+.next-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--button);
+  color: var(--button-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.next-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Results screen */
+.results-card {
+  background: var(--secondary-bg);
+  border-radius: var(--card-radius);
+  padding: 28px 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.results-emoji { font-size: 46px; margin-bottom: 8px; }
+.results-score { font-size: 28px; font-weight: 700; margin: 4px 0; }
+.results-caption { font-size: 13.5px; color: var(--hint); }
+
+.result-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.result-actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary { background: var(--button); color: var(--button-text); }
+.btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); }
+
+/* Lock / paywall screen */
+.paywall-card {
+  background: var(--secondary-bg);
+  border-radius: var(--card-radius);
+  padding: 24px 18px;
+  text-align: center;
+}
+
+.paywall-card .icon { font-size: 40px; margin-bottom: 10px; }
+.paywall-card h2 { font-size: 16px; margin: 0 0 8px; }
+.paywall-card p { font-size: 13.5px; color: var(--hint); margin: 0 0 16px; line-height: 1.4; }
+
+.footer-note {
+  margin-top: auto;
+  padding-top: 18px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--hint);
+}
