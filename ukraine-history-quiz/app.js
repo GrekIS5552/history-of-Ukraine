@@ -71,6 +71,42 @@ function totalQuestionsInBank() {
   return TOPICS.reduce((sum, t) => sum + t.questions.length, 0);
 }
 
+// ==== "Літопис" visual helpers: roman numerals instead of emoji topic icons, ====
+// ==== inline line-icons instead of emoji, so the app doesn't look like a generic quiz template ====
+function toRoman(num) {
+  const table = [
+    [1000, "M"], [900, "CM"], [500, "D"], [400, "CD"],
+    [100, "C"], [90, "XC"], [50, "L"], [40, "XL"],
+    [10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"],
+  ];
+  let n = num;
+  let out = "";
+  for (const [value, symbol] of table) {
+    while (n >= value) {
+      out += symbol;
+      n -= value;
+    }
+  }
+  return out;
+}
+
+const OPTION_LETTERS = ["А", "Б", "В", "Г", "Д", "Е"];
+
+const ICONS = {
+  emblem: `<svg viewBox="0 0 34 34" fill="none"><path d="M17 3 L17 22 M10 8 C10 14 13 17 17 17 C21 17 24 14 24 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 22 L22 22 L19.5 28 L14.5 28 Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  scroll: `<svg viewBox="0 0 24 24" fill="none"><path d="M6 4h10a2 2 0 0 1 2 2v13a2 2 0 0 0 2-2V8M6 4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9h6M9 13h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  banner: `<svg viewBox="0 0 24 24" fill="none"><path d="M6 3v18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M6 4h13l-3 4 3 4H6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  flame: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 3c1 3-3 4-3 8a3 3 0 0 0 6 0c0-1.5-1-2-1-3.5 1.5 1 3 3 3 6a5 5 0 0 1-10 0c0-4 2.5-5.5 5-10.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  laurel: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M8 8c-2 1-3 3-3 6M16 8c2 1 3 3 3 6M8 11c-2 .5-3 2-3 4M16 11c2 .5 3 2 3 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  book: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13zM20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  fist: `<svg viewBox="0 0 24 24" fill="none"><path d="M7 10V7a2 2 0 0 1 4 0M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L4.5 13a1.5 1.5 0 0 1 2.4-1.8L7 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  seal: `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 14l-2 7 5.5-3 5.5 3-2-7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`,
+  lock: `<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5L20 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  cross: `<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+};
+
 function topicIsLocked(topicIndex) {
   if (isOwner) return false;
   if (!CONFIG.MONETIZATION_ENABLED) return false; // поки монетизація вимкнена — усе відкрито
@@ -202,19 +238,17 @@ function renderHome() {
     </div>
 
     <div class="hero-card">
-      <div class="hero-text">
-        <div class="hero-title">Історія України</div>
-        <div class="hero-subtitle">Готуйся до НМТ крок за кроком</div>
-      </div>
-      <div class="hero-icon">📖</div>
+      <div class="hero-icon">${ICONS.emblem}</div>
+      <div class="hero-title">Літопис Історії України</div>
+      <div class="hero-subtitle">14 розділів. Понад ${totalQ} запитань.<br>Готуйся до НМТ крок за кроком.</div>
     </div>
 
-    <button class="choose-topic-btn" id="chooseTopicBtn">🔍&nbsp; Обрати тему</button>
+    <button class="choose-topic-btn" id="chooseTopicBtn">Обрати розділ</button>
 
     ${
       lastTopic
         ? `<div class="continue-card" id="continueCard">
-            <div class="continue-icon">${lastTopic.icon}</div>
+            <div class="continue-icon">${toRoman(lastTopicIdx + 1)}</div>
             <div class="continue-info">
               <div class="continue-title">${lastTopic.title}</div>
               <div class="continue-sub">Останній результат: ${lastStats.bestPct}% · продовжити навчання</div>
@@ -224,25 +258,25 @@ function renderHome() {
         : ""
     }
 
-    <div class="section-title">Мій прогрес</div>
+    <div class="section-title">Мій поступ</div>
     <div class="stats-grid">
       <div class="stat-card stat-blue">
-        <div class="stat-icon">🛡️</div>
+        <div class="stat-icon">${ICONS.shield}</div>
         <div class="stat-value">${data.totalCorrectEver}/${totalQ}</div>
         <div class="stat-label">Рейтинг</div>
       </div>
       <div class="stat-card stat-green">
-        <div class="stat-icon">◐</div>
+        <div class="stat-icon">${ICONS.scroll}</div>
         <div class="stat-value">${coursePct}%</div>
         <div class="stat-label">Курс пройдено</div>
       </div>
       <div class="stat-card stat-orange">
-        <div class="stat-icon">🚩</div>
+        <div class="stat-icon">${ICONS.banner}</div>
         <div class="stat-value">${topicsCount}</div>
-        <div class="stat-label">Тем у курсі</div>
+        <div class="stat-label">Розділів у курсі</div>
       </div>
       <div class="stat-card stat-red">
-        <div class="stat-icon">🔥</div>
+        <div class="stat-icon">${ICONS.flame}</div>
         <div class="stat-value">${streak}</div>
         <div class="stat-label">Серія днів</div>
       </div>
@@ -272,13 +306,13 @@ function renderTopics() {
     const locked = topicIsLocked(idx);
     topicsHtml += `
       <div class="topic-card ${locked ? "topic-locked" : ""}" data-topic-index="${idx}">
-        <div class="topic-icon">${topic.icon}</div>
+        <div class="topic-icon">${toRoman(idx + 1)}</div>
         <div class="topic-info">
           <p class="topic-title">${topic.title}</p>
           <p class="topic-period">${topic.period}</p>
           ${
             locked
-              ? `<span class="lock-badge">🔒 Premium · Stars</span>`
+              ? `<span class="lock-badge">Premium · Stars</span>`
               : `<div class="topic-progress-row">
                   <div class="progress-bar"><div class="progress-bar-fill" style="width:${stats.bestPct}%"></div></div>
                   <span class="topic-progress-pct">${stats.bestPct}%</span>
@@ -291,10 +325,10 @@ function renderTopics() {
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
-      <div class="quiz-progress-text">Обери тему</div>
+      <div class="quiz-progress-text">Обери розділ</div>
     </div>
     <div class="topics-list">${topicsHtml}</div>
-    <div class="footer-note">По 10 випадкових питань із кожної теми</div>
+    <div class="footer-note">По 10 випадкових питань із кожного розділу</div>
   `;
 
   document.getElementById("backBtn").addEventListener("click", goHome);
@@ -319,9 +353,9 @@ function renderLocked() {
       <div class="quiz-progress-text">${topic.title}</div>
     </div>
     <div class="paywall-card">
-      <div class="icon">⭐️</div>
-      <h2>Ця тема — преміум</h2>
-      <p>Розблокуй усі теми одноразово за Telegram Stars. Оплата поки не підключена — скоро буде доступна прямо тут.</p>
+      <div class="icon">${ICONS.seal}</div>
+      <h2>Цей розділ — преміум</h2>
+      <p>Розблокуй усі розділи одноразово за Telegram Stars. Оплата поки не підключена — скоро буде доступна прямо тут.</p>
       <button class="next-btn" disabled>Розблокувати за Stars (скоро)</button>
     </div>
   `;
@@ -336,24 +370,30 @@ function renderQuiz() {
   let optionsHtml = "";
   question.options.forEach((opt, i) => {
     let cls = "option-btn";
+    let icon = "";
     if (q.answered) {
       cls += " disabled";
-      if (i === question.correct) cls += " correct";
-      else if (i === q.selectedIndex) cls += " wrong";
+      if (i === question.correct) { cls += " correct"; icon = ICONS.check; }
+      else if (i === q.selectedIndex) { cls += " wrong"; icon = ICONS.cross; }
     }
-    optionsHtml += `<button class="${cls}" data-option-index="${i}">${escapeHtml(opt)}</button>`;
+    optionsHtml += `<button class="${cls}" data-option-index="${i}">
+      <span class="option-letter">${OPTION_LETTERS[i] || i + 1}</span>
+      <span style="flex:1">${escapeHtml(opt)}</span>
+      <span class="option-check">${icon}</span>
+    </button>`;
   });
 
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
-      <div class="quiz-progress-text">${topic.title} · ${q.current + 1}/${q.questions.length} · ✅ ${q.score}</div>
+      <div class="quiz-progress-text">${topic.title} · Питання ${q.current + 1} з ${q.questions.length} · Бал ${q.score}</div>
     </div>
     <div class="question-card">
+      ${question.img ? `<div class="question-image-wrap"><img class="question-image" src="${escapeHtml(question.img)}" alt="Ілюстрація до питання" loading="lazy" /></div>` : ""}
       <p class="question-text">${escapeHtml(question.q)}</p>
     </div>
     <div class="options-list">${optionsHtml}</div>
-    ${q.answered ? `<div class="explanation-box">💡 ${escapeHtml(question.explanation)}</div>` : ""}
+    ${q.answered ? `<div class="explanation-box">${escapeHtml(question.explanation)}</div>` : ""}
     <div style="height:16px"></div>
     <button class="next-btn" id="nextBtn" ${q.answered ? "" : "disabled"}>
       ${q.current + 1 < q.questions.length ? "Далі →" : "Завершити"}
@@ -371,11 +411,11 @@ function renderResults() {
   const topic = TOPICS[state.topicIndex];
   const q = state.quiz;
   const pct = Math.round((q.score / q.questions.length) * 100);
-  let emoji = "📚";
+  let icon = ICONS.book;
   let caption = "Є куди рости — повтори тему ще раз.";
-  if (pct >= 90) { emoji = "🏆"; caption = "Чудовий результат! Тему опановано."; }
-  else if (pct >= 70) { emoji = "🔥"; caption = "Добре! Ще трохи практики — і буде відмінно."; }
-  else if (pct >= 50) { emoji = "💪"; caption = "Непогано, але варто повторити матеріал."; }
+  if (pct >= 90) { icon = ICONS.laurel; caption = "Чудовий результат! Розділ опановано."; }
+  else if (pct >= 70) { icon = ICONS.flame; caption = "Добре! Ще трохи практики — і буде відмінно."; }
+  else if (pct >= 50) { icon = ICONS.fist; caption = "Непогано, але варто повторити матеріал."; }
 
   root.innerHTML = `
     <div class="quiz-header">
@@ -383,7 +423,7 @@ function renderResults() {
       <div class="quiz-progress-text">${topic.title}</div>
     </div>
     <div class="results-card">
-      <div class="results-emoji">${emoji}</div>
+      <div class="results-emoji">${icon}</div>
       <div class="results-score">${q.score} / ${q.questions.length}</div>
       <div class="results-caption">${caption}</div>
     </div>
