@@ -657,3 +657,88 @@ body::before {
   color: var(--hint-dim);
   font-style: italic;
 }
+
+/* "Хроніка проходжень" — history of completed quiz attempts */
+.history-link-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--card-radius);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.history-link-btn svg { width: 16px; height: 16px; color: var(--gold); }
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.history-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--secondary-bg);
+  border: 1px solid var(--hairline-soft);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 3px 3px 0;
+  padding: 12px 14px;
+}
+
+.history-tone-gold { border-left-color: var(--gold-bright); }
+.history-tone-wine { border-left-color: var(--wine-soft); }
+.history-tone-lapis { border-left-color: var(--lapis-bright); }
+.history-tone-verdigris { border-left-color: var(--verdigris-bright); }
+
+.history-entry-main { min-width: 0; flex: 1; }
+
+.history-entry-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-entry-date {
+  font-size: 11px;
+  color: var(--hint);
+  font-style: italic;
+}
+
+.history-entry-score {
+  font-family: "PT Serif", serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.history-entry-pct {
+  display: block;
+  font-family: "PT Sans", sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--hint);
+}
+
+.history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--hint);
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.5;
+}

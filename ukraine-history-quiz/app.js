@@ -19,8 +19,11 @@ function defaultData() {
     totalCorrectEver: 0,
     lastTopicId: null,
     streak: { count: 0, lastActiveDate: null },
+    history: [], // [{ topicId, topicTitle, score, total, pct, date }], newest first, capped at HISTORY_LIMIT
   };
 }
+
+const HISTORY_LIMIT = 50;
 
 function loadData() {
   try {
@@ -188,6 +191,16 @@ function finishQuiz() {
     lastScore: q.score,
     attempts: (prev.attempts || 0) + 1,
   };
+  if (!Array.isArray(data.history)) data.history = [];
+  data.history.unshift({
+    topicId: topic.id,
+    topicTitle: topic.title,
+    score: q.score,
+    total: q.questions.length,
+    pct: Math.round((q.score / q.questions.length) * 100),
+    date: new Date().toISOString(),
+  });
+  if (data.history.length > HISTORY_LIMIT) data.history.length = HISTORY_LIMIT;
   saveData();
   state.screen = "results";
   render();
@@ -203,6 +216,24 @@ function goTopics() {
   render();
 }
 
+function goHistory() {
+  state = { screen: "history", topicIndex: null, quiz: null };
+  render();
+}
+
+function formatHistoryDate(iso) {
+  try {
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const months = ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру"];
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${dd} ${months[d.getMonth()]} · ${hh}:${mm}`;
+  } catch (e) {
+    return "";
+  }
+}
+
 // ==== Rendering ====
 function render() {
   if (state.screen === "home") return renderHome();
@@ -210,6 +241,7 @@ function render() {
   if (state.screen === "quiz") return renderQuiz();
   if (state.screen === "results") return renderResults();
   if (state.screen === "locked") return renderLocked();
+  if (state.screen === "history") return renderHistory();
 }
 
 function avatarHtml(size) {
@@ -282,10 +314,18 @@ function renderHome() {
       </div>
     </div>
 
+    <button class="history-link-btn" id="historyLinkBtn">
+      <span>${ICONS.scroll}</span>
+      <span style="flex:1; text-align:left;">Хроніка проходжень</span>
+      <span>${data.history.length ? data.history.length : ""}</span>
+      <span class="continue-arrow">›</span>
+    </button>
+
     <div class="footer-note">Прогрес зберігається на цьому пристрої</div>
   `;
 
   document.getElementById("chooseTopicBtn").addEventListener("click", goTopics);
+  document.getElementById("historyLinkBtn").addEventListener("click", goHistory);
   const continueCard = document.getElementById("continueCard");
   if (continueCard) {
     continueCard.addEventListener("click", () => {
@@ -360,6 +400,41 @@ function renderLocked() {
     </div>
   `;
   document.getElementById("backBtn").addEventListener("click", goTopics);
+}
+
+function renderHistory() {
+  const history = data.history || [];
+
+  let listHtml = "";
+  if (!history.length) {
+    listHtml = `<div class="history-empty">Ще немає завершених проходжень.<br>Пройди свій перший квіз — і запис з'явиться тут.</div>`;
+  } else {
+    history.forEach((h) => {
+      let tone = "verdigris";
+      if (h.pct >= 90) tone = "gold";
+      else if (h.pct >= 70) tone = "wine";
+      else if (h.pct >= 50) tone = "lapis";
+      listHtml += `
+        <div class="history-entry history-tone-${tone}">
+          <div class="history-entry-main">
+            <div class="history-entry-title">${escapeHtml(h.topicTitle)}</div>
+            <div class="history-entry-date">${formatHistoryDate(h.date)}</div>
+          </div>
+          <div class="history-entry-score">${h.score}/${h.total}<span class="history-entry-pct">${h.pct}%</span></div>
+        </div>`;
+    });
+  }
+
+  root.innerHTML = `
+    <div class="quiz-header">
+      <button class="back-btn" id="backBtn">‹</button>
+      <div class="quiz-progress-text">Хроніка проходжень</div>
+    </div>
+    <div class="history-list">${listHtml}</div>
+    ${history.length ? `<div class="footer-note">Останні ${history.length} із ${HISTORY_LIMIT} записів, що зберігаються</div>` : ""}
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goHome);
 }
 
 function renderQuiz() {
