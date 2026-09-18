@@ -776,3 +776,132 @@ body::before {
   font-style: italic;
   line-height: 1.5;
 }
+
+/* ==== Флешкартки ==== */
+.flashcard-scene {
+  display: flex;
+  justify-content: center;
+  padding: 24px 8px 8px;
+  perspective: 1200px;
+  touch-action: pan-y;
+}
+
+.flashcard-swipe-wrap {
+  width: 100%;
+  max-width: 340px;
+  will-change: transform, opacity;
+  cursor: grab;
+}
+
+.flashcard-flip {
+  position: relative;
+  width: 100%;
+  min-height: 260px;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease;
+}
+.flashcard-flip.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 28px 22px;
+}
+
+.flashcard-front {
+  border-top: 2px solid var(--gold);
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+  border-top: 2px solid var(--lapis);
+  background: var(--panel-2);
+}
+
+.flashcard-text {
+  font-family: "PT Serif", serif;
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.flashcard-back .flashcard-text {
+  font-family: "PT Sans", sans-serif;
+  font-size: 15px;
+}
+
+.flashcard-hint {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--hint-dim);
+  font-style: italic;
+}
+
+.flashcard-known-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  color: var(--verdigris-bright);
+}
+.flashcard-known-badge svg { width: 100%; height: 100%; }
+
+.flashcard-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 16px 4px;
+}
+
+.flashcard-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  font-family: "PT Sans", sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.flashcard-btn svg { width: 16px; height: 16px; }
+
+.flashcard-btn-again {
+  background: var(--panel);
+  color: var(--hint);
+}
+
+.flashcard-btn-know {
+  background: var(--verdigris-bg);
+  color: var(--verdigris-bright);
+  border-color: var(--verdigris);
+}
+
+.link-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--hint);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 8px;
+}

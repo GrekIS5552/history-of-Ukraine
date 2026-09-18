@@ -15,7 +15,7 @@ import {
   listAllPayments,
   getStats,
 } from "./db.js";
-import { sendMessage, sendInvoice, answerPreCheckoutQuery, setWebhook, getWebhookInfo } from "./telegram.js";
+import { sendMessage, sendInvoice, createInvoiceLink, answerPreCheckoutQuery, setWebhook, getWebhookInfo } from "./telegram.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -118,6 +118,26 @@ app.get("/api/status/:telegramId", async (req, res) => {
   if (!Number.isFinite(telegramId)) return res.status(400).json({ error: "bad telegramId" });
   const status = await getPremiumStatus(telegramId);
   res.json(status);
+});
+
+// Створює посилання на оплату Stars для кнопки прямо в Mini App
+// (фронтенд викликає це, а потім відкриває отримане посилання через
+// Telegram.WebApp.openInvoice — оплата без жодної команди боту).
+app.get("/api/premium-link/:telegramId", async (req, res) => {
+  const telegramId = Number(req.params.telegramId);
+  if (!Number.isFinite(telegramId)) return res.status(400).json({ error: "bad telegramId" });
+
+  const status = await getPremiumStatus(telegramId);
+  if (status.isPremium) return res.json({ alreadyPremium: true, premiumUntil: status.premiumUntil });
+
+  const result = await createInvoiceLink({
+    title: "Преміум-доступ на 30 днів",
+    description: "Усі 14 розділів і 600+ питань без обмежень протягом 30 днів.",
+    payload: `premium_30d_${telegramId}_${Date.now()}`,
+    amountStars: PREMIUM_PRICE_STARS,
+  });
+  if (!result.ok) return res.status(502).json({ error: "telegram_error", description: result.description });
+  res.json({ link: result.result });
 });
 
 // ==== Адмінські ендпоінти (захищені окремим секретом, не плутати з webhook-секретом) ====

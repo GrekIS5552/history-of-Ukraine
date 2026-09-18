@@ -31,6 +31,20 @@ export function sendInvoice(chatId, { title, description, payload, amountStars }
   });
 }
 
+// Створює посилання на рахунок (без відправки в чат) — саме це відкриває
+// Telegram.WebApp.openInvoice() зсередини Mini App, щоб оплата йшла кнопкою
+// прямо в застосунку, а не командою боту.
+export function createInvoiceLink({ title, description, payload, amountStars }) {
+  return call("createInvoiceLink", {
+    title,
+    description,
+    payload,
+    currency: "XTR",
+    provider_token: "",
+    prices: [{ label: title, amount: amountStars }],
+  });
+}
+
 export function answerPreCheckoutQuery(preCheckoutQueryId, ok, errorMessage) {
   return call("answerPreCheckoutQuery", {
     pre_checkout_query_id: preCheckoutQueryId,

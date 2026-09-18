@@ -27,6 +27,56 @@ const currentUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initD
 const userId = currentUser ? currentUser.id : "guest";
 const isOwner = CONFIG.OWNER_TELEGRAM_IDS.includes(userId);
 
+// ==== Реальний преміум-статус (перевіряється на бекенді, не локально) ====
+// Поки відповідь не прийшла — вважаємо, що преміуму нема (безпечніше за замовчуванням).
+let isPremiumUser = false;
+let premiumUntil = null;
+
+async function fetchPremiumStatus() {
+  if (!CONFIG.BACKEND_URL || userId === "guest") return;
+  try {
+    const res = await fetch(`${CONFIG.BACKEND_URL}/api/status/${userId}`);
+    const status = await res.json();
+    isPremiumUser = !!status.isPremium;
+    premiumUntil = status.premiumUntil || null;
+  } catch (e) {
+    // Бекенд недоступний (спить/офлайн) — просто лишаємось на безкоштовних темах,
+    // не ламаємо застосунок.
+  }
+  render();
+}
+
+// Купівля преміуму кнопкою прямо в застосунку (Telegram Stars), без команди боту.
+async function buyPremium(buttonEl) {
+  if (!CONFIG.BACKEND_URL || userId === "guest") return;
+  if (buttonEl) { buttonEl.disabled = true; buttonEl.textContent = "Зачекай…"; }
+  try {
+    const res = await fetch(`${CONFIG.BACKEND_URL}/api/premium-link/${userId}`);
+    const data2 = await res.json();
+    if (data2.alreadyPremium) {
+      isPremiumUser = true;
+      premiumUntil = data2.premiumUntil || null;
+      render();
+      return;
+    }
+    if (!data2.link) throw new Error("no invoice link");
+    tg.openInvoice(data2.link, (status) => {
+      if (status === "paid") {
+        fetchPremiumStatus();
+      } else if (buttonEl) {
+        buttonEl.disabled = false;
+        buttonEl.textContent = "Розблокувати за Stars";
+      }
+    });
+  } catch (e) {
+    if (buttonEl) {
+      buttonEl.disabled = false;
+      buttonEl.textContent = "Розблокувати за Stars";
+    }
+    if (tg.showAlert) tg.showAlert("Не вдалося створити рахунок. Спробуй трохи пізніше.");
+  }
+}
+
 // ==== Progress storage (per-device, keyed by Telegram user id) ====
 const STORAGE_KEY = `uahist_progress_v2_${userId}`;
 
@@ -37,6 +87,7 @@ function defaultData() {
     lastTopicId: null,
     streak: { count: 0, lastActiveDate: null },
     history: [], // [{ topicId, topicTitle, score, total, pct, date }], newest first, capped at HISTORY_LIMIT
+    flashcards: {}, // { [topicId]: [cardIndex, ...] } — картки, позначені як "знаю"
   };
 }
 
@@ -129,7 +180,8 @@ const ICONS = {
 
 function topicIsLocked(topicIndex) {
   if (isOwner) return false;
-  if (!CONFIG.MONETIZATION_ENABLED) return false; // поки монетизація вимкнена — усе відкрито
+  if (isPremiumUser) return false;
+  if (!CONFIG.MONETIZATION_ENABLED) return false; // монетизація вимкнена — усе відкрито
   return topicIndex >= CONFIG.FREE_TOPICS_COUNT;
 }
 
@@ -238,6 +290,112 @@ function goHistory() {
   render();
 }
 
+// ==== Флешкартки ====
+function flashcardTopicIds() {
+  return TOPICS.map((t) => t.id).filter((id) => typeof FLASHCARDS !== "undefined" && Array.isArray(FLASHCARDS[id]) && FLASHCARDS[id].length);
+}
+
+function flashcardStats(topicId) {
+  const cards = (typeof FLASHCARDS !== "undefined" && FLASHCARDS[topicId]) || [];
+  const known = (data.flashcards[topicId] || []).length;
+  return { total: cards.length, known };
+}
+
+function goFlashcardTopics() {
+  state = { screen: "flashcardTopics", topicIndex: null, quiz: null };
+  render();
+}
+
+function goFlashcardDeck(topicIndex) {
+  const topic = TOPICS[topicIndex];
+  const cards = (typeof FLASHCARDS !== "undefined" && FLASHCARDS[topic.id]) || [];
+  const order = shuffled(cards.map((_, i) => i));
+  state = {
+    screen: "flashcards",
+    topicIndex,
+    quiz: null,
+    deck: { order, pos: 0, flipped: false },
+  };
+  render();
+}
+
+function swipeCard(result) {
+  const topic = TOPICS[state.topicIndex];
+  const deck = state.deck;
+  if (!deck) return;
+  const cardIndex = deck.order[deck.pos];
+
+  if (result === "know") {
+    if (!data.flashcards[topic.id]) data.flashcards[topic.id] = [];
+    if (!data.flashcards[topic.id].includes(cardIndex)) {
+      data.flashcards[topic.id].push(cardIndex);
+      saveData();
+    }
+  }
+
+  deck.pos += 1;
+  deck.flipped = false;
+  render();
+}
+
+function setupCardFlipAndSwipe() {
+  const wrap = document.getElementById("cardSwipeWrap");
+  const flip = document.getElementById("cardFlip");
+  if (!wrap || !flip) return;
+
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+  let dragging = false;
+  let moved = 0;
+
+  function onPointerDown(e) {
+    dragging = true;
+    moved = 0;
+    startX = e.clientX;
+    startY = e.clientY;
+    startTime = Date.now();
+    wrap.style.transition = "none";
+  }
+  function onPointerMove(e) {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    moved = Math.abs(dx) + Math.abs(dy);
+    wrap.style.transform = `translateX(${dx}px) rotate(${dx / 18}deg)`;
+  }
+  function onPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    const dx = e.clientX - startX;
+    const elapsed = Date.now() - startTime;
+
+    if (moved < 8 && elapsed < 400) {
+      wrap.style.transition = "transform 0.2s ease";
+      wrap.style.transform = "";
+      state.deck.flipped = !state.deck.flipped;
+      flip.classList.toggle("is-flipped");
+      return;
+    }
+
+    if (Math.abs(dx) > 90) {
+      const dir = dx > 0 ? "know" : "again";
+      wrap.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+      wrap.style.transform = `translateX(${dx > 0 ? 600 : -600}px) rotate(${dx > 0 ? 30 : -30}deg)`;
+      wrap.style.opacity = "0";
+      setTimeout(() => swipeCard(dir), 220);
+    } else {
+      wrap.style.transition = "transform 0.2s ease";
+      wrap.style.transform = "";
+    }
+  }
+
+  wrap.addEventListener("pointerdown", onPointerDown);
+  wrap.addEventListener("pointermove", onPointerMove);
+  wrap.addEventListener("pointerup", onPointerUp);
+  wrap.addEventListener("pointercancel", onPointerUp);
+}
+
 function formatHistoryDate(iso) {
   try {
     const d = new Date(iso);
@@ -259,6 +417,8 @@ function render() {
   if (state.screen === "results") return renderResults();
   if (state.screen === "locked") return renderLocked();
   if (state.screen === "history") return renderHistory();
+  if (state.screen === "flashcardTopics") return renderFlashcardTopics();
+  if (state.screen === "flashcards") return renderFlashcards();
 }
 
 function avatarHtml(size) {
@@ -331,6 +491,12 @@ function renderHome() {
       </div>
     </div>
 
+    <button class="history-link-btn" id="flashcardsLinkBtn">
+      <span>${ICONS.book}</span>
+      <span style="flex:1; text-align:left;">Картки для повторення</span>
+      <span class="continue-arrow">›</span>
+    </button>
+
     <button class="history-link-btn" id="historyLinkBtn">
       <span>${ICONS.scroll}</span>
       <span style="flex:1; text-align:left;">Історія проходжень</span>
@@ -342,6 +508,7 @@ function renderHome() {
   `;
 
   document.getElementById("chooseTopicBtn").addEventListener("click", goTopics);
+  document.getElementById("flashcardsLinkBtn").addEventListener("click", goFlashcardTopics);
   document.getElementById("historyLinkBtn").addEventListener("click", goHistory);
   const continueCard = document.getElementById("continueCard");
   if (continueCard) {
@@ -412,11 +579,12 @@ function renderLocked() {
     <div class="paywall-card">
       <div class="icon">${ICONS.seal}</div>
       <h2>Цей розділ — преміум</h2>
-      <p>Розблокуй усі розділи одноразово за Telegram Stars. Оплата поки не підключена — скоро буде доступна прямо тут.</p>
-      <button class="next-btn" disabled>Розблокувати за Stars (скоро)</button>
+      <p>Розблокуй усі розділи на 30 днів за Telegram Stars — оплата одразу тут, без переходу в чат із ботом.</p>
+      <button class="next-btn" id="buyBtn">Розблокувати за Stars</button>
     </div>
   `;
   document.getElementById("backBtn").addEventListener("click", goTopics);
+  document.getElementById("buyBtn").addEventListener("click", (e) => buyPremium(e.currentTarget));
 }
 
 function renderHistory() {
@@ -452,6 +620,118 @@ function renderHistory() {
   `;
 
   document.getElementById("backBtn").addEventListener("click", goHome);
+}
+
+function renderFlashcardTopics() {
+  const availableIds = flashcardTopicIds();
+  let topicsHtml = "";
+  TOPICS.forEach((topic, idx) => {
+    const hasCards = availableIds.includes(topic.id);
+    const locked = hasCards && topicIsLocked(idx);
+    const stats = hasCards ? flashcardStats(topic.id) : null;
+    topicsHtml += `
+      <div class="topic-card ${!hasCards || locked ? "topic-locked" : ""}" data-topic-index="${idx}" data-has-cards="${hasCards ? "1" : "0"}">
+        <div class="topic-icon">${toRoman(idx + 1)}</div>
+        <div class="topic-info">
+          <p class="topic-title">${topic.title}</p>
+          <p class="topic-period">${topic.period}</p>
+          ${
+            !hasCards
+              ? `<span class="lock-badge">Картки скоро</span>`
+              : locked
+              ? `<span class="lock-badge">Premium · Stars</span>`
+              : `<div class="topic-progress-row">
+                  <div class="progress-bar"><div class="progress-bar-fill" style="width:${Math.round((stats.known / stats.total) * 100)}%"></div></div>
+                  <span class="topic-progress-pct">${stats.known}/${stats.total}</span>
+                </div>`
+          }
+        </div>
+      </div>`;
+  });
+
+  root.innerHTML = `
+    <div class="quiz-header">
+      <button class="back-btn" id="backBtn">‹</button>
+      <div class="quiz-progress-text">Картки для повторення</div>
+    </div>
+    <div class="topics-list">${topicsHtml}</div>
+    <div class="footer-note">Свайп картки вправо — знаю, вліво — повторити</div>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goHome);
+  document.querySelectorAll(".topic-card[data-has-cards='1']").forEach((el) => {
+    el.addEventListener("click", () => {
+      const idx = Number(el.dataset.topicIndex);
+      if (topicIsLocked(idx)) {
+        state = { screen: "locked", topicIndex: idx, quiz: null };
+        render();
+      } else {
+        goFlashcardDeck(idx);
+      }
+    });
+  });
+}
+
+function renderFlashcards() {
+  const topic = TOPICS[state.topicIndex];
+  const cards = (typeof FLASHCARDS !== "undefined" && FLASHCARDS[topic.id]) || [];
+  const deck = state.deck;
+
+  if (!deck || deck.pos >= deck.order.length) {
+    const stats = flashcardStats(topic.id);
+    root.innerHTML = `
+      <div class="quiz-header">
+        <button class="back-btn" id="backBtn">‹</button>
+        <div class="quiz-progress-text">${topic.title}</div>
+      </div>
+      <div class="results-card results-tone-gold">
+        <div class="results-emoji">${ICONS.laurel}</div>
+        <div class="results-score">${stats.known} / ${stats.total}</div>
+        <div class="results-caption">Колоду пройдено. Позначено «знаю»: ${stats.known} із ${stats.total} карток.</div>
+      </div>
+      <button class="next-btn" id="restartDeckBtn">Пройти ще раз</button>
+      <button class="link-btn" id="toTopicsBtn">До вибору теми</button>
+    `;
+    document.getElementById("backBtn").addEventListener("click", goFlashcardTopics);
+    document.getElementById("restartDeckBtn").addEventListener("click", () => goFlashcardDeck(state.topicIndex));
+    document.getElementById("toTopicsBtn").addEventListener("click", goFlashcardTopics);
+    return;
+  }
+
+  const cardIndex = deck.order[deck.pos];
+  const card = cards[cardIndex];
+  const known = (data.flashcards[topic.id] || []).includes(cardIndex);
+
+  root.innerHTML = `
+    <div class="quiz-header">
+      <button class="back-btn" id="backBtn">‹</button>
+      <div class="quiz-progress-text">${topic.title} · картка ${deck.pos + 1} з ${deck.order.length}</div>
+    </div>
+    <div class="flashcard-scene">
+      <div class="flashcard-swipe-wrap" id="cardSwipeWrap">
+        <div class="flashcard-flip ${deck.flipped ? "is-flipped" : ""}" id="cardFlip">
+          <div class="flashcard-face flashcard-front">
+            ${known ? `<div class="flashcard-known-badge">${ICONS.check}</div>` : ""}
+            <div class="flashcard-text">${escapeHtml(card.front)}</div>
+            <div class="flashcard-hint">Торкнись, щоб перевернути</div>
+          </div>
+          <div class="flashcard-face flashcard-back">
+            <div class="flashcard-text">${escapeHtml(card.back)}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flashcard-actions">
+      <button class="flashcard-btn flashcard-btn-again" id="btnAgain">${ICONS.cross} Повторити</button>
+      <button class="flashcard-btn flashcard-btn-know" id="btnKnow">${ICONS.check} Знаю</button>
+    </div>
+    <div class="footer-note">Свайп картки вправо — знаю, вліво — повторити</div>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goFlashcardTopics);
+  document.getElementById("btnAgain").addEventListener("click", () => swipeCard("again"));
+  document.getElementById("btnKnow").addEventListener("click", () => swipeCard("know"));
+  setupCardFlipAndSwipe();
 }
 
 function renderQuiz() {
@@ -538,3 +818,4 @@ function escapeHtml(str) {
 }
 
 render();
+fetchPremiumStatus(); // асинхронно уточнює реальний преміум-статус із бекенду і перемальовує екран
