@@ -13,10 +13,20 @@
   --gold-bright: #e0bb5c;
   --wine: #8a2b2b;
   --wine-soft: #a24b45;
+  --wine-bg: rgba(138, 43, 43, 0.14);
   --green: #6fb267;
   --green-bg: rgba(111, 178, 103, 0.12);
   --red: #c96b62;
   --red-bg: rgba(201, 107, 98, 0.12);
+  /* "Illuminated manuscript" pigment accents — lapis lazuli blue and verdigris green,
+     the two other pigments (besides gold leaf and vermillion) real medieval scribes used,
+     so the palette has real variety instead of only gold-on-black */
+  --lapis: #3e6690;
+  --lapis-bright: #6a94bf;
+  --lapis-bg: rgba(62, 102, 144, 0.14);
+  --verdigris: #4c8574;
+  --verdigris-bright: #6fac99;
+  --verdigris-bg: rgba(76, 133, 116, 0.14);
   --hairline: rgba(201, 161, 59, 0.28);
   --hairline-soft: rgba(201, 161, 59, 0.16);
   --card-radius: 4px;
@@ -168,7 +178,7 @@ body::before {
 /* Continue card */
 .continue-card {
   background: var(--secondary-bg);
-  border: 1px solid var(--hairline);
+  border: 1px solid rgba(62, 102, 144, 0.35);
   border-radius: var(--card-radius);
   padding: 14px 16px;
   display: flex;
@@ -188,9 +198,9 @@ body::before {
   align-items: center;
   justify-content: center;
   background: var(--panel);
-  border: 1.5px solid var(--gold);
+  border: 1.5px solid var(--lapis-bright);
   border-radius: 50%;
-  color: var(--gold);
+  color: var(--lapis-bright);
   flex-shrink: 0;
 }
 
@@ -209,7 +219,7 @@ body::before {
 
 .continue-arrow {
   font-size: 20px;
-  color: var(--gold);
+  color: var(--lapis-bright);
 }
 
 .section-title {
@@ -264,6 +274,23 @@ body::before {
 
 .stat-blue, .stat-green, .stat-orange, .stat-red { background: var(--secondary-bg); }
 .stat-blue .stat-icon, .stat-green .stat-icon, .stat-orange .stat-icon, .stat-red .stat-icon { background: var(--panel); }
+
+/* four illuminated-manuscript pigments, one per stat, instead of one gold note repeated */
+.stat-blue { border-color: rgba(62, 102, 144, 0.3); }
+.stat-blue .stat-icon { border-color: var(--lapis-bright); color: var(--lapis-bright); }
+.stat-blue .stat-value { color: var(--lapis-bright); }
+
+.stat-green { border-color: rgba(76, 133, 116, 0.3); }
+.stat-green .stat-icon { border-color: var(--verdigris-bright); color: var(--verdigris-bright); }
+.stat-green .stat-value { color: var(--verdigris-bright); }
+
+.stat-orange { border-color: rgba(201, 161, 59, 0.3); }
+.stat-orange .stat-icon { border-color: var(--gold-bright); color: var(--gold-bright); }
+.stat-orange .stat-value { color: var(--gold-bright); }
+
+.stat-red { border-color: rgba(162, 75, 69, 0.3); }
+.stat-red .stat-icon { border-color: var(--wine-soft); color: var(--wine-soft); }
+.stat-red .stat-value { color: var(--wine-soft); }
 
 .overall-progress {
   background: var(--secondary-bg);
@@ -560,6 +587,15 @@ body::before {
   color: var(--gold);
 }
 .results-emoji svg { width: 26px; height: 26px; }
+
+.results-tone-gold { border-color: var(--gold); }
+.results-tone-gold .results-emoji { border-color: var(--gold-bright); color: var(--gold-bright); }
+.results-tone-wine { border-color: var(--wine-soft); }
+.results-tone-wine .results-emoji { border-color: var(--wine-soft); color: var(--wine-soft); }
+.results-tone-lapis { border-color: var(--lapis); }
+.results-tone-lapis .results-emoji { border-color: var(--lapis-bright); color: var(--lapis-bright); }
+.results-tone-verdigris { border-color: var(--verdigris); }
+.results-tone-verdigris .results-emoji { border-color: var(--verdigris-bright); color: var(--verdigris-bright); }
 
 .results-score {
   font-family: "PT Serif", serif;

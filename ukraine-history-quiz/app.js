@@ -412,17 +412,18 @@ function renderResults() {
   const q = state.quiz;
   const pct = Math.round((q.score / q.questions.length) * 100);
   let icon = ICONS.book;
+  let tone = "verdigris";
   let caption = "Є куди рости — повтори тему ще раз.";
-  if (pct >= 90) { icon = ICONS.laurel; caption = "Чудовий результат! Розділ опановано."; }
-  else if (pct >= 70) { icon = ICONS.flame; caption = "Добре! Ще трохи практики — і буде відмінно."; }
-  else if (pct >= 50) { icon = ICONS.fist; caption = "Непогано, але варто повторити матеріал."; }
+  if (pct >= 90) { icon = ICONS.laurel; tone = "gold"; caption = "Чудовий результат! Розділ опановано."; }
+  else if (pct >= 70) { icon = ICONS.flame; tone = "wine"; caption = "Добре! Ще трохи практики — і буде відмінно."; }
+  else if (pct >= 50) { icon = ICONS.fist; tone = "lapis"; caption = "Непогано, але варто повторити матеріал."; }
 
   root.innerHTML = `
     <div class="quiz-header">
       <button class="back-btn" id="backBtn">‹</button>
       <div class="quiz-progress-text">${topic.title}</div>
     </div>
-    <div class="results-card">
+    <div class="results-card results-tone-${tone}">
       <div class="results-emoji">${icon}</div>
       <div class="results-score">${q.score} / ${q.questions.length}</div>
       <div class="results-caption">${caption}</div>
